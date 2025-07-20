@@ -36,13 +36,51 @@
       <div class="payment-method-options">
         <div 
           class="payment-method-option" 
-          @click="$emit('payment-selected', 'balance')" 
-          :class="{selected: selectedPayment === 'balance'}"
+          @click="$emit('payment-selected', 'midtrans')" 
+          :class="{selected: selectedPayment === 'midtrans'}"
         >
-          <div class="payment-method-name">Saldo VIPayment</div>
-          <div class="payment-method-balance">Rp 4.321.000</div>
+          <div class="payment-method-info">
+            <div class="payment-method-name">🏦 Transfer Bank / E-Wallet</div>
+            <div class="payment-method-desc">BCA, BNI, Mandiri, OVO, DANA, GoPay, ShopeePay</div>
+            <div class="payment-gateway-badge">Via Midtrans</div>
+          </div>
         </div>
-        <!-- Tambahkan metode pembayaran lain sesuai kebutuhan -->
+
+        <div 
+          class="payment-method-option" 
+          @click="$emit('payment-selected', 'xendit')" 
+          :class="{selected: selectedPayment === 'xendit'}"
+        >
+          <div class="payment-method-info">
+            <div class="payment-method-name">💳 Kartu Kredit / Debit</div>
+            <div class="payment-method-desc">Visa, MasterCard, JCB</div>
+            <div class="payment-gateway-badge">Via Xendit</div>
+          </div>
+        </div>
+
+        <div 
+          class="payment-method-option" 
+          @click="$emit('payment-selected', 'tripay')" 
+          :class="{selected: selectedPayment === 'tripay'}"
+        >
+          <div class="payment-method-info">
+            <div class="payment-method-name">🏪 Convenience Store</div>
+            <div class="payment-method-desc">Alfamart, Indomaret</div>
+            <div class="payment-gateway-badge">Via TriPay</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="payment-gateway-info">
+      <div class="gateway-notice">
+        <span class="info-icon">ℹ️</span>
+        <div class="notice-content">
+          <p><strong>Flow Pembayaran</strong></p>
+          <p>1. Anda akan diarahkan ke payment gateway yang aman</p>
+          <p>2. Setelah pembayaran berhasil, sistem akan otomatis memproses pesanan ke VIPayment</p>
+          <p>3. Pesanan akan segera diproses menggunakan saldo VIPayment</p>
+        </div>
       </div>
     </div>
 
@@ -53,12 +91,12 @@
         Kembali
       </button>
       <button 
-        @click="$emit('submit')" 
+        @click="handlePayment" 
         :disabled="loading || !selectedPayment" 
         class="button-primary"
       >
         <span v-if="loading" class="loader-small"></span>
-        <span v-else>Bayar Sekarang</span>
+        <span v-else>{{ getPaymentButtonText() }}</span>
       </button>
     </div>
   </div>
@@ -76,12 +114,22 @@ const props = defineProps({
   quantity: { type: Number, default: 1 },
   needAdditional: { type: Boolean, default: false },
   additionalData: { type: String, default: '' },
-  selectedPayment: { type: String, default: 'balance' },
+  selectedPayment: { type: String, default: 'midtrans' },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' }
 })
 
-defineEmits(['back', 'submit', 'payment-selected'])
+defineEmits(['back', 'submit', 'payment-selected', 'payment-gateway'])
+
+// Handle payment - all payments go through gateway first
+function handlePayment() {
+  // All payments must go through payment gateway first
+  emit('payment-gateway', props.selectedPayment)
+}
+
+function getPaymentButtonText() {
+  return 'Lanjut ke Pembayaran'
+}
 
 // Format price helper
 function formatPrice(price) {
@@ -141,27 +189,80 @@ function formatPrice(price) {
   gap: 10px;
 }
 .payment-method-option {
-  padding: 14px;
+  padding: 16px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease-in-out;
 }
 .payment-method-option:hover {
-  border-color: #a1a1aa;
-  background: #f8fafc;
+  border-color: #3b82f6;
+  background: #e0f2fe;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 .payment-method-option.selected {
   border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
   background: #eff6ff;
+  transform: translateY(-1px);
+}
+.payment-method-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .payment-method-name {
   font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 15px;
+  color: #0f172a;
+}
+.payment-method-desc {
+  font-size: 13px;
+  color: #64748b;
 }
 .payment-method-balance {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 500;
+}
+.payment-gateway-badge {
+  display: inline-block;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
+  width: fit-content;
+}
+.payment-gateway-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.gateway-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.info-icon {
+  font-size: 20px;
+  margin-top: 2px;
+}
+.notice-content p {
+  margin: 0 0 8px 0;
   font-size: 14px;
-  color: #64748b;
+  line-height: 1.4;
+}
+.notice-content p:last-child {
+  margin-bottom: 0;
+}
+.notice-content strong {
+  color: #1e40af;
 }
 .action-buttons {
   display: flex;
@@ -181,13 +282,15 @@ function formatPrice(price) {
   color: white;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .button-primary:hover {
   background: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 .button-primary[disabled] {
   opacity: 0.7;
@@ -202,10 +305,12 @@ function formatPrice(price) {
   color: #475569;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 .button-secondary:hover {
   background: #e2e8f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 .form-error {
   color: #ef4444;

@@ -1,7 +1,7 @@
 <template>
-  <div class="form-container">
+  <div class="form-container" v-motion-slide-visible-bottom>
     <h3>Get Game Services</h3>
-    <form @submit.prevent="fetchServices" class="flex gap-2 items-center mb-4">
+    <form @submit.prevent="fetchServices" class="flex gap-2 items-center mb-4" v-motion-slide-visible-bottom :delay="100">
       <select v-model="selectedGame" class="vip-select">
         <option>Mobile Legends a</option>
         <option>Mobile Legends b</option>
@@ -26,11 +26,11 @@
       </select>
       <button type="submit" :disabled="loading">Lihat Layanan Game</button>
     </form>
-    <div v-if="error" class="error">{{ error }}</div>
-    <div v-if="loading" class="flex justify-center items-center py-8">
+    <div v-if="error" class="error" v-motion-slide-visible-bottom :delay="200">{{ error }}</div>
+    <div v-if="loading" class="flex justify-center items-center py-8" v-motion-slide-visible-bottom :delay="200">
       <span>Loading layanan game...</span>
     </div>
-    <div v-else-if="services && services.data && services.data.length">
+    <div v-else-if="services && services.data && services.data.length" v-motion-slide-visible-bottom :delay="200">
       <h4 class="mb-2 font-semibold text-lg">Daftar Layanan Game:</h4>
       <div v-if="selectedGame" class="game-title mb-6">Untuk game <span>{{ selectedGame }}</span></div>
       <div class="vip-card-grid">
@@ -48,7 +48,7 @@
         </div>
       </div>
     </div>
-    <div v-else-if="services && (!services.data || !services.data.length)" class="py-8 text-center text-gray-400">
+    <div v-else-if="services && (!services.data || !services.data.length)" class="py-8 text-center text-gray-400" v-motion-slide-visible-bottom :delay="200">
       Tidak ada layanan yang ditemukan.
     </div>
   </div>
@@ -198,6 +198,21 @@ const fetchServices = async () => {
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.vip-select:hover {
+  border-color: #93c5fd; /* blue-300 */
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.45); /* blue-300 with opacity */
+}
+
+.vip-select:focus {
+  outline: none;
+  border-color: #60a5fa; /* blue-400 */
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.6); /* blue-400 with opacity */
+}
+
+.vip-select {
   background: #fff;
   color: #1e293b;
 }
@@ -215,5 +230,36 @@ const fetchServices = async () => {
 
 .vip-card-header {
   gap: 10px;
+}
+
+button[type="submit"] {
+  background: #2563eb;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  background: #1d4ed8; /* blue-700 */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+button[type="submit"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45); /* blue-600 with opacity */
+}
+
+button[type="submit"]:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 </style>

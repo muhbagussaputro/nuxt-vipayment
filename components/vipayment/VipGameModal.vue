@@ -1,27 +1,73 @@
 <template>
   <div>
     <div v-if="show && !selectedService" class="modal-backdrop" @click.self="close">
-      <div class="modal-content">
+      <div class="modal-content-responsive" v-motion-slide-visible-bottom :delay="100">
         <button class="modal-close" @click="close">×</button>
-        <div v-if="loading" class="modal-loading">Loading layanan game...</div>
-        <div v-else-if="error" class="modal-error">{{ error }}</div>
-        <div v-else-if="services && services.data && services.data.length">
-          <h4 class="mb-2 font-semibold text-lg">Daftar Layanan Game:</h4>
-          <div v-if="gameName" class="game-title mb-6">Untuk game <span>{{ gameName }}</span></div>
-          <div class="vip-card-grid">
-            <div v-for="(item, idx) in services.data" :key="item.code" class="vip-card-wrapper">
-              <div class="vip-card" @click="toggleBuyForm(item.code)">
-                <div class="vip-card-header">
-                  <span class="vip-card-title">{{ item.name }}</span>
-                  <div class="vip-price-row">
-                    <span class="vip-icon">💎</span> 
-                    <span class="vip-price">{{ formatPrice(item.price.basic)}} </span>
+        
+        <div v-if="loading" class="modal-body text-center">
+          <div class="loading loading-lg"></div>
+          <p class="mt-4 text-secondary">Loading layanan game...</p>
+        </div>
+        
+        <div v-else-if="error" class="modal-body text-center">
+          <p class="text-error">{{ error }}</p>
+        </div>
+        
+        <div v-else-if="services?.data?.length" class="modal-body">
+          <h4 class="text-xl font-semibold mb-4">Daftar Layanan Game</h4>
+          <div v-if="gameName" class="mb-6">
+            <span class="text-secondary">Untuk game </span>
+            <span class="text-primary font-semibold">{{ gameName }}</span>
+          </div>
+          
+          <!-- Search Input -->
+          <div class="search-container">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Cari layanan..."
+                class="search-input"
+              />
+              <button 
+                v-if="searchQuery" 
+                @click="clearSearch" 
+                class="clear-search"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          
+          <div class="service-container">
+            <div 
+              v-for="(item, index) in filteredServices" 
+              :key="item.code" 
+              class="service-item-wrapper"
+            >
+              <div class="service-card cursor-pointer" @click="toggleBuyForm(item.code)">
+                <div class="service-content">
+                  <div class="service-name-section">
+                    <h5 class="service-title">{{ item.name }}</h5>
                   </div>
-                  <span :class="['vip-badge', item.status === 'available' ? 'vip-badge-available' : 'vip-badge-unavailable']">
-                    {{ item.status === 'available' ? 'Tersedia' : 'Tidak Tersedia' }}
-                  </span>
+                  
+                  <div class="service-price-section">
+                    <span class="price-icon">💎</span>
+                    <span class="price-text">{{ formatPrice(item.price.basic) }}</span>
+                  </div>
+                  
+                  <div class="service-status-section">
+                    <span :class="[
+                      'status-badge',
+                      item.status === 'available' ? 'status-available' : 'status-unavailable'
+                    ]">
+                      {{ formatStatus(item.status) }}
+                    </span>
+                  </div>
                 </div>
               </div>
+              
               <VipGameBuyForm
                 v-if="openedServiceCode === item.code"
                 :service="{
@@ -34,17 +80,27 @@
               />
             </div>
           </div>
+          
+          <!-- No Results -->
+          <div v-if="filteredServices.length === 0" class="no-results">
+            <p class="text-secondary text-center">Tidak ada layanan yang ditemukan untuk "{{ searchQuery }}"</p>
+          </div>
         </div>
-        <div v-else-if="services && (!services.data || !services.data.length)" class="empty">Tidak ada layanan ditemukan.</div>
+        
+        <div v-else class="modal-body text-center">
+          <p class="text-secondary">Tidak ada layanan ditemukan.</p>
+        </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useServiceCache } from '~/composables/useServiceCache'
+import { useFormatters } from '~/composables/useFormatters'
 import VipGameBuyForm from '~/components/vipayment/VipGameBuyForm.vue'
+
 const props = defineProps({
   show: Boolean,
   slug: String,
@@ -52,11 +108,32 @@ const props = defineProps({
 })
 const emit = defineEmits(['close'])
 
+const { fetchServicesWithCache } = useServiceCache()
+const { formatPrice, formatStatus } = useFormatters()
+
 const services = ref(null)
 const loading = ref(false)
 const error = ref('')
 const openedServiceCode = ref(null)
 const selectedService = ref(null)
+const searchQuery = ref('')
+
+// Computed property for filtered services
+const filteredServices = computed(() => {
+  if (!services.value?.data || !searchQuery.value) {
+    return services.value?.data || []
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return services.value.data.filter(item => 
+    item.name.toLowerCase().includes(query) ||
+    item.code.toLowerCase().includes(query)
+  )
+})
+
+function clearSearch() {
+  searchQuery.value = ''
+}
 
 watch(() => props.show, async (val) => {
   if (val && props.slug) {
@@ -66,8 +143,10 @@ watch(() => props.show, async (val) => {
     services.value = null
     error.value = ''
     selectedService.value = null
+    searchQuery.value = ''
   }
 })
+
 watch(() => props.slug, async (val) => {
   if (props.show && val) {
     await fetchServices()
@@ -79,16 +158,8 @@ async function fetchServices() {
   error.value = ''
   services.value = null
   try {
-    const { data } = await useFetch('/vipayment/game/services', {
-      baseURL: useRuntimeConfig().public.apiBase,
-      method: 'POST',
-      body: {
-        filter_type: 'game',
-        filter_value: props.gameName,
-        filter_status: 'available'
-      }
-    })
-    services.value = data.value
+    const data = await fetchServicesWithCache(props.gameName, 'available')
+    services.value = data
   } catch (e) {
     error.value = 'Gagal mengambil layanan game.'
   } finally {
@@ -111,131 +182,257 @@ function closeBuyForm() {
 function onBuySuccess(data) {
   console.log('Transaksi berhasil:', data)
 }
-
-function formatPrice(price) {
-  if (typeof price !== 'number') return '-';
-  return price.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).replace('IDR', 'Rp');
-}
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  z-index: 50;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(30,41,59,0.33);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.modal-content {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px 0 rgba(60,60,100,0.18);
-  padding: 32px 28px 22px 28px;
-  max-width: 620px;
-  width: 98vw;
+.modal-content-responsive {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  position: relative;
+  animation: slideIn 0.2s ease;
+  width: 95vw;
+  max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* Search Styles */
+.search-container {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  padding-bottom: 1rem;
+}
+
+.search-input-wrapper {
   position: relative;
-  animation: modalIn 0.17s cubic-bezier(.4,2,.6,1) both;
+  display: flex;
+  align-items: center;
 }
-@keyframes modalIn {
-  0% { transform: translateY(40px) scale(0.95); opacity: 0; }
-  100% { transform: none; opacity: 1; }
-}
-.modal-close {
+
+.search-icon {
   position: absolute;
-  top: 12px;
-  right: 18px;
-  background: none;
-  border: none;
-  font-size: 2rem;
+  left: 1rem;
   color: #64748b;
-  cursor: pointer;
-  transition: color 0.2s;
   z-index: 2;
 }
-.modal-close:hover {
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+.clear-search {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.clear-search:hover {
+  background-color: #f1f5f9;
   color: #ef4444;
 }
-.modal-loading, .modal-error, .empty {
-  text-align: center;
-  color: #64748b;
-  margin: 24px 0;
-}
-.modal-error {
-  color: #f43f5e;
-}
-.vip-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  margin-top: 12px;
-}
-.vip-card {
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 4px 18px 0 rgba(0,0,0,0.07), 0 1.5px 6px 0 rgba(0,0,0,0.03);
-  border: 1px solid #e5e7eb;
-  padding: 24px 20px 18px 20px;
+
+.service-container {
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s, transform 0.2s;
-  position: relative;
+  gap: 0.75rem;
 }
-.vip-card:hover {
-  box-shadow: 0 8px 28px 0 rgba(0,0,0,0.13), 0 4px 12px 0 rgba(0,0,0,0.09);
-  transform: translateY(-4px) scale(1.02);
+
+.service-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
-.vip-card-header {
+
+.service-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
-.vip-card-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #2563eb;
-  flex: 1;
-  margin-right: 8px;
+
+.service-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px) scale(1.01);
+  background: linear-gradient(45deg, #e0f2fe, #bfdbfe);
 }
-.vip-badge {
-  font-size: 0.8rem;
+
+.service-content {
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  min-height: 60px;
+}
+
+.service-name-section {
+  min-width: 0;
+}
+
+.service-title {
   font-weight: 600;
-  padding: 3px 12px;
-  border-radius: 12px;
-  display: inline-block;
-  margin-left: 8px;
+  font-size: 0.95rem;
+  color: #3b82f6;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: 0;
 }
-.vip-badge-available {
-  background: #e0f2fe;
-  color: #0284c7;
-}
-.vip-badge-unavailable {
-  background: #fee2e2;
-  color: #dc2626;
-}
-.vip-price-row {
+
+.service-price-section {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-  font-size: 1rem;
+  gap: 0.5rem;
+  white-space: nowrap;
+  justify-content: center;
 }
-.vip-icon {
-  font-size: 1.15em;
+
+.price-icon {
+  font-size: 1.1rem;
 }
-.vip-price {
+
+.price-text {
   font-weight: 600;
-  color: #0ea5e9;
+  color: #3b82f6;
+  font-size: 0.9rem;
 }
-.game-title span {
-  color: #0ea5e9;
-  font-weight: 600;
+
+.service-status-section {
+  display: flex;
+  justify-content: flex-end;
 }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-6 { margin-bottom: 1.5rem; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-available {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-unavailable {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.no-results {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .modal-content-responsive {
+    width: 98vw;
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem);
+  }
+  
+  .service-content {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 0.875rem;
+  }
+  
+  .service-name-section {
+    order: 1;
+  }
+  
+  .service-price-section {
+    order: 2;
+    justify-content: center;
+  }
+  
+  .service-status-section {
+    order: 3;
+    justify-content: center;
+  }
+  
+  .service-title {
+    font-size: 0.875rem;
+    text-align: center;
+  }
+  
+  .price-text {
+    font-size: 0.875rem;
+  }
+  
+  .search-input {
+    font-size: 0.8rem;
+    padding: 0.625rem 1rem 0.625rem 2.25rem;
+  }
+}
+
+/* Tablet */
+@media (min-width: 641px) and (max-width: 768px) {
+  .modal-content-responsive {
+    width: 90vw;
+    max-width: 700px;
+  }
+  
+  .service-content {
+    grid-template-columns: 2fr 1fr auto;
+    gap: 0.875rem;
+  }
+  
+  .service-title {
+    font-size: 0.9rem;
+  }
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+  .service-content {
+    padding: 0.75rem;
+  }
+  
+  .service-title {
+    font-size: 0.8rem;
+  }
+  
+  .price-text {
+    font-size: 0.8rem;
+  }
+  
+  .status-badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+}
 </style>

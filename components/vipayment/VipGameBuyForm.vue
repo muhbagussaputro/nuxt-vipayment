@@ -1,31 +1,32 @@
 <template>
   <div class="modal-backdrop" @click.self="close">
     <div class="modal-content">
-      <button class="modal-close" @click="close">×</button>
+      <button class="modal-close transition-all duration-200 hover:scale-125 hover:text-red-500" @click="close">×</button>
       <h3 class="mb-4 font-bold text-lg">{{ step === 'form' ? 'Pembelian Layanan Game' : (step === 'confirm' ? 'Konfirmasi Pembayaran' : 'Pesanan Berhasil') }}</h3>
 
-      <!-- Form Input Step -->
-      <VipGameInputForm
-        v-if="step === 'form'"
-        :service="service"
-        :active-game="activeGame"
-        :has-additional-field="hasAdditionalField"
-        :data-no="dataNo"
-        :data-zone="dataZone"
-        :server="server"
-        :additional-data="additionalData"
-        :nickname="nickname"
-        :quantity="quantity"
-        :loading="loading"
-        :error="error"
-        :get-additional-target="getAdditionalTarget"
-        @update:data-no="dataNo = $event"
-        @update:data-zone="dataZone = $event"
-        @update:server="server = $event"
-        @update:additional-data="additionalData = $event"
-        @update:quantity="quantity = $event"
-        @submit="goToConfirm"
-      />
+      <Transition name="fade-slide" mode="out-in">
+        <!-- Form Input Step -->
+        <VipGameInputForm
+          v-if="step === 'form'"
+          :service="service"
+          :active-game="activeGame"
+          :has-additional-field="hasAdditionalField"
+          :data-no="dataNo"
+          :data-zone="dataZone"
+          :server="server"
+          :additional-data="additionalData"
+          :nickname="nickname"
+          :quantity="quantity"
+          :loading="loading"
+          :error="error"
+          :get-additional-target="getAdditionalTarget"
+          @update:data-no="dataNo = $event"
+          @update:data-zone="dataZone = $event"
+          @update:server="server = $event"
+          @update:additional-data="additionalData = $event"
+          @update:quantity="quantity = $event"
+          @submit="goToConfirm"
+        />
 
       <!-- Konfirmasi Pembayaran Step -->
       <VipGamePaymentConfirm
@@ -44,7 +45,8 @@
         :loading="loading"
         :error="error"
         @back="backToForm"
-        @submit="submitOrder"
+        @submit="handlePaymentGateway"
+        @payment-gateway="handlePaymentGateway"
         @payment-selected="selectedPayment = $event"
       />
 
@@ -63,6 +65,7 @@
         @download="downloadReceipt"
         @check-status="checkTransactionStatus"
       />
+      </Transition>
     </div>
   </div>
 </template>
@@ -72,6 +75,9 @@ import { ref, onMounted, computed, nextTick } from 'vue'
 import VipGameInputForm from './VipGameInputForm.vue'
 import VipGamePaymentConfirm from './VipGamePaymentConfirm.vue'
 import VipGameSuccessReceipt from './VipGameSuccessReceipt.vue'
+
+// Import payment gateway composable
+const { createPaymentOrder, redirectToPayment } = usePaymentGateway()
 
 const props = defineProps({
   service: { type: Object, required: true },
@@ -98,7 +104,7 @@ const emit = defineEmits(['close','success'])
 
 // Multi-step flow
 const step = ref('form') // form -> confirm -> success
-const selectedPayment = ref('balance')
+const selectedPayment = ref('midtrans')
 const orderResult = ref(null)
 
 const dataNo = ref('')
@@ -505,49 +511,50 @@ function backToForm() {
   error.value = ''
 }
 
-// Proses pembayaran dan pembelian
-async function submitOrder() {
+// Handle payment gateway flow
+async function handlePaymentGateway(paymentMethod) {
   error.value = ''
-  success.value = false
   loading.value = true
+  
   try {
-    // Submit order/topup
-    const orderResponse = await submitTopup()
+    // Use the selected payment method or the parameter passed
+    const gateway = paymentMethod || selectedPayment.value
     
-    // Log response untuk debugging
-    console.log('Pembelian berhasil! Order ID:', orderResponse.data?.trxid || 'N/A')
-    console.log('Response lengkap:', orderResponse)
-    
-    // Set order result data
-    orderResult.value = orderResponse
-    
-    // Set status sukses
-    success.value = true
-    
-    // Emit event sukses ke parent component
-    emit('success', { 
-      service: props.service, 
-      target: dataNo.value, 
-      data_zone: getAdditionalTarget(),
+    // Prepare order data for payment gateway
+    const orderData = {
+      amount: props.service.price.basic,
+      service_code: props.service.code,
+      service_name: props.service.name,
+      target: dataNo.value,
+      additional_target: getAdditionalTarget(),
       quantity: props.service.need_quantity ? quantity.value : 1,
       additional_data: props.service.need_additional ? additionalData.value : '',
-      nickname: nickname.value, 
-      response: orderResponse
-    })
+      customer_name: nickname.value || 'Customer',
+      customer_email: 'customer@vipayment.com',
+      customer_phone: '081234567890'
+    }
     
-    // FORCE set step ke success dan pastikan perubahan ini terjadi
-    step.value = 'success'
-    console.log('Step changed to:', step.value)
+    // Create payment order
+    const paymentResponse = await createPaymentOrder(gateway, orderData)
     
-    // Untuk memastikan perubahan terlihat dengan benar, paksa update UI
-    await nextTick()
+    // Redirect to payment gateway
+    redirectToPayment(paymentResponse.payment_url)
+    
+    // Show waiting message
+    alert('Anda akan diarahkan ke halaman pembayaran. Setelah pembayaran berhasil, pesanan akan diproses otomatis ke VIPayment.')
+    
+    // Close modal for now - in real app you might want to show waiting status
+    close()
+    
   } catch (e) {
-    console.error('Order error:', e)
-    error.value = e.message || 'Pembelian gagal. Silakan coba lagi.'
+    console.error('Payment gateway error:', e)
+    error.value = e.message || 'Gagal membuat pembayaran. Silakan coba lagi.'
   } finally {
     loading.value = false
   }
 }
+
+
 
 // Ambil nickname dari backend
 async function fetchNickname() {
@@ -672,5 +679,17 @@ async function submitTopup() {
 }
 .mb-4 {
   margin-bottom: 16px;
+}
+
+/* Transition styles */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease-in-out;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
 }
 </style>
