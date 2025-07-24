@@ -12,7 +12,6 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE
     }
-    // console.log(process.env.NUXT_PUBLIC_API_BASE);
   },
   
   // App configuration
