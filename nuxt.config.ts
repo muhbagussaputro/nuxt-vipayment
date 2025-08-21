@@ -38,6 +38,13 @@ export default defineNuxtConfig({
   build: {
     transpile: ['vue-toastification']
   },
+
+  // Nitro configuration
+  nitro: {
+    experimental: {
+      wasm: true
+    }
+  },
   
   // Vite configuration
   vite: {
@@ -52,7 +59,8 @@ export default defineNuxtConfig({
     },
     optimizeDeps: {
       include: ['vue', 'vue-router']
-    }
+    },
+
   },
   
   // Development configuration

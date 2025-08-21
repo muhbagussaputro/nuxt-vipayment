@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="show && !selectedService" class="modal-backdrop" @click.self="close">
-      <div class="modal-content-responsive" v-motion-slide-visible-bottom :delay="100">
+      <div class="modal-content-responsive" :class="{ 'animate-slide-up-delay': mounted }">
         <button class="modal-close" @click="close">×</button>
         
         <div v-if="loading" class="modal-body text-center">
@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useServiceCache } from '~/composables/useServiceCache'
 import { useFormatters } from '~/composables/useFormatters'
 import GameBuyForm from '~/components/game/GameBuyForm.vue'
@@ -117,6 +117,11 @@ const error = ref('')
 const openedServiceCode = ref(null)
 const selectedService = ref(null)
 const searchQuery = ref('')
+const mounted = ref(false)
+
+onMounted(() => {
+  mounted.value = true
+})
 
 // Computed property for filtered services
 const filteredServices = computed(() => {
@@ -185,6 +190,28 @@ function onBuySuccess(data) {
 </script>
 
 <style scoped>
+/* Animation classes to replace v-motion */
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+.animate-slide-up-delay {
+  animation: slideUp 0.6s ease-out 0.1s forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .modal-content-responsive {
   background: white;
   border-radius: 0.75rem;

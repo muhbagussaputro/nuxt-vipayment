@@ -1,7 +1,7 @@
 <template>
-  <div class="form-container" v-motion-slide-visible-bottom>
+  <div class="form-container" :class="{ 'animate-slide-up': mounted }">
     <h3>Get Game Services</h3>
-    <form @submit.prevent="fetchServices" class="flex gap-2 items-center mb-4" v-motion-slide-visible-bottom :delay="100">
+    <form @submit.prevent="fetchServices" class="flex gap-2 items-center mb-4" :class="{ 'animate-slide-up-delay': mounted }">
       <select v-model="selectedGame" class="vip-select">
         <option>Mobile Legends a</option>
         <option>Mobile Legends b</option>
@@ -26,11 +26,11 @@
       </select>
       <button type="submit" :disabled="loading">Lihat Layanan Game</button>
     </form>
-    <div v-if="error" class="error" v-motion-slide-visible-bottom :delay="200">{{ error }}</div>
-    <div v-if="loading" class="flex justify-center items-center py-8" v-motion-slide-visible-bottom :delay="200">
+    <div v-if="error" class="error" :class="{ 'animate-slide-up-delay-2': mounted }">{{ error }}</div>
+    <div v-if="loading" class="flex justify-center items-center py-8" :class="{ 'animate-slide-up-delay-2': mounted }">
       <span>Loading layanan game...</span>
     </div>
-    <div v-else-if="services && services.data && services.data.length" v-motion-slide-visible-bottom :delay="200">
+    <div v-else-if="services && services.data && services.data.length" :class="{ 'animate-slide-up-delay-2': mounted }">
       <h4 class="mb-2 font-semibold text-lg">Daftar Layanan Game:</h4>
       <div v-if="selectedGame" class="game-title mb-6">Untuk game <span>{{ selectedGame }}</span></div>
       <div class="vip-card-grid">
@@ -48,18 +48,23 @@
         </div>
       </div>
     </div>
-    <div v-else-if="services && (!services.data || !services.data.length)" class="py-8 text-center text-gray-400" v-motion-slide-visible-bottom :delay="200">
+    <div v-else-if="services && (!services.data || !services.data.length)" class="py-8 text-center text-gray-400" :class="{ 'animate-slide-up-delay-2': mounted }">
       Tidak ada layanan yang ditemukan.
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 const services = ref(null)
 const error = ref('')
 const loading = ref(false)
 const selectedGame = ref('')
+const mounted = ref(false)
+
+onMounted(() => {
+  mounted.value = true
+})
 
 function formatPrice(price) {
   if (typeof price !== 'number') return '-';
@@ -95,6 +100,34 @@ const fetchServices = async () => {
 </script>
 
 <style scoped>
+/* Animation classes to replace v-motion */
+.animate-slide-up {
+  animation: slideUp 0.6s ease-out forwards;
+}
+
+.animate-slide-up-delay {
+  animation: slideUp 0.6s ease-out 0.1s forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.animate-slide-up-delay-2 {
+  animation: slideUp 0.6s ease-out 0.2s forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .form-container {
   margin-bottom: 32px;
   padding: 16px;
