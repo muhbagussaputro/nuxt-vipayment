@@ -116,14 +116,14 @@
     </main>
     
     <!-- Modals -->
-    <VipGameModal
+    <GameModal
       :show="showGameModal"
       :slug="selectedGameSlug"
       :gameName="selectedGameName"
       @close="closeGameModal"
     />
     
-    <VipPrepaidServicesForm
+    <PrepaidServicesForm
       :show="showPrepaidModal"
       :service="selectedPrepaidService"
       @close="closePrepaidModal"
@@ -133,12 +133,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import AppHeader from '~/components/layout/AppHeader.vue'
+import AppHeader from '~/components/common/AppHeader.vue'
 import HeroSection from '~/components/home/HeroSection.vue'
 import PromotionBanner from '~/components/promotion/PromotionBanner.vue'
 import ProductCard from '~/components/product/ProductCard.vue'
-import VipGameModal from '~/components/vipayment/VipGameModal.vue'
-import VipPrepaidServicesForm from '~/components/vipayment/VipPrepaidServicesForm.vue'
+import GameModal from '~/components/game/GameModal.vue'
+import PrepaidServicesForm from '~/components/prepaid/PrepaidServicesForm.vue'
 
 // Composables
 const { isMobile, isTablet, isDesktop } = useResponsive()

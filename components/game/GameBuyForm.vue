@@ -6,7 +6,7 @@
 
       <Transition name="fade-slide" mode="out-in">
         <!-- Form Input Step -->
-        <VipGameInputForm
+        <GameInputForm
           v-if="step === 'form'"
           :service="service"
           :active-game="activeGame"
@@ -29,7 +29,7 @@
         />
 
       <!-- Konfirmasi Pembayaran Step -->
-      <VipGamePaymentConfirm
+      <GamePaymentConfirm
         v-else-if="step === 'confirm'"
         :service="service"
         :data-no="dataNo"
@@ -51,7 +51,7 @@
       />
 
       <!-- Success Step -->
-      <VipGameSuccessReceipt
+      <GameSuccessReceipt
         v-else-if="step === 'success'"
         :order-data="orderResult?.data"
         :service-name="service.name"
@@ -72,9 +72,9 @@
 
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
-import VipGameInputForm from './VipGameInputForm.vue'
-import VipGamePaymentConfirm from './VipGamePaymentConfirm.vue'
-import VipGameSuccessReceipt from './VipGameSuccessReceipt.vue'
+import GameInputForm from './GameInputForm.vue'
+import GamePaymentConfirm from './GamePaymentConfirm.vue'
+import GameSuccessReceipt from './GameSuccessReceipt.vue'
 
 // Import payment gateway composable
 const { createPaymentOrder, redirectToPayment } = usePaymentGateway()

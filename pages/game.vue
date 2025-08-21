@@ -1,22 +1,22 @@
 <template>
   <div class="container">
     <h2>Game Services</h2>
-    <VipGameServicesForm />
-    <VipGameOrderTopUpForm />
-    <VipGameOrderJokiForm />
-    <VipGameCheckStatusForm />
-    <VipGameNicknameForm />
+    <GameServicesForm />
+    <GameOrderTopUpForm />
+    <GameOrderJokiForm />
+    <GameCheckStatusForm />
+    <GameNicknameForm />
     <!-- Webhook endpoint biasanya untuk server, bukan frontend, jadi tidak dibuat form -->
     <NuxtLink to="/" class="btn">Kembali</NuxtLink>
   </div>
 </template>
 
 <script setup>
-import VipGameServicesForm from '~/components/vipayment/VipGameServicesForm.vue'
-import VipGameOrderTopUpForm from '~/components/vipayment/VipGameOrderTopUpForm.vue'
-import VipGameOrderJokiForm from '~/components/vipayment/VipGameOrderJokiForm.vue'
-import VipGameCheckStatusForm from '~/components/vipayment/VipGameCheckStatusForm.vue'
-import VipGameNicknameForm from '~/components/vipayment/VipGameNicknameForm.vue'
+import GameServicesForm from '~/components/game/GameServicesForm.vue'
+import GameOrderTopUpForm from '~/components/game/GameOrderTopUpForm.vue'
+import GameOrderJokiForm from '~/components/game/GameOrderJokiForm.vue'
+import GameCheckStatusForm from '~/components/game/GameCheckStatusForm.vue'
+import GameNicknameForm from '~/components/game/GameNicknameForm.vue'
 </script>
 
 <style scoped>

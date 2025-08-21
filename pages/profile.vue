@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import AppHeader from '~/components/layout/AppHeader.vue'
+import AppHeader from '~/components/common/AppHeader.vue'
 import ProfileHeader from '~/components/profile/ProfileHeader.vue'
 import ProfileInfo from '~/components/profile/ProfileInfo.vue'
 import TransactionHistory from '~/components/profile/TransactionHistory.vue'

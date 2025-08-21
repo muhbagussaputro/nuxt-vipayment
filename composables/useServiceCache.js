@@ -1,77 +1,79 @@
-import { ref, readonly } from 'vue'
-
-const servicesCache = ref(new Map())
-const cacheExpiry = ref(new Map())
-const CACHE_DURATION = 15 * 60 * 1000 // 15 menit
+import { ref } from 'vue'
 
 export const useServiceCache = () => {
-  const getCacheKey = (gameName, filterStatus = 'available') => {
-    return `${gameName}_${filterStatus}`
+  // Cache storage
+  const serviceCache = ref(new Map())
+  const cacheTimeout = 5 * 60 * 1000 // 5 minutes
+
+  // Get cache key
+  const getCacheKey = (type, value, status) => {
+    return `${type}_${value}_${status || 'all'}`
   }
 
-  const isExpired = (key) => {
-    const expiry = cacheExpiry.value.get(key)
-    if (!expiry) return true
-    return Date.now() > expiry
+  // Check if cache is valid
+  const isCacheValid = (timestamp) => {
+    return Date.now() - timestamp < cacheTimeout
   }
 
-  const setCache = (key, data) => {
-    servicesCache.value.set(key, data)
-    cacheExpiry.value.set(key, Date.now() + CACHE_DURATION)
-  }
+  // Fetch services with cache
+  const fetchServicesWithCache = async (filterType, filterValue, filterStatus = 'available') => {
+    const cacheKey = getCacheKey(filterType, filterValue, filterStatus)
+    const cached = serviceCache.value.get(cacheKey)
 
-  const getCache = (key) => {
-    if (isExpired(key)) {
-      servicesCache.value.delete(key)
-      cacheExpiry.value.delete(key)
-      return null
-    }
-    return servicesCache.value.get(key)
-  }
-
-  const clearCache = (key = null) => {
-    if (key) {
-      servicesCache.value.delete(key)
-      cacheExpiry.value.delete(key)
-    } else {
-      servicesCache.value.clear()
-      cacheExpiry.value.clear()
-    }
-  }
-
-  const fetchServicesWithCache = async (gameName, filterStatus = 'available') => {
-    const cacheKey = getCacheKey(gameName, filterStatus)
-    
-    const cachedData = getCache(cacheKey)
-    if (cachedData) {
-      console.log('📦 Cache hit:', gameName)
-      return cachedData
+    // Return cached data if valid
+    if (cached && isCacheValid(cached.timestamp)) {
+      return cached.data
     }
 
-    console.log('🌐 API call:', gameName)
+    // Fetch new data
     try {
-      const { data } = await useFetch('/vipayment/game/services', {
-        baseURL: useRuntimeConfig().public.apiBase,
+      const config = useRuntimeConfig()
+      const response = await $fetch('/vipayment/game/services', {
+        baseURL: config.public.apiBase,
         method: 'POST',
         body: {
-          filter_type: 'game',
-          filter_value: gameName,
+          filter_type: filterType,
+          filter_value: filterValue,
           filter_status: filterStatus
         }
       })
-      
-      const result = data.value
-      setCache(cacheKey, result)
-      return result
+
+      // Extract data array from response structure { result, data, message }
+      const serviceData = response.result && response.data ? response : { data: [] }
+
+      // Cache the result
+      serviceCache.value.set(cacheKey, {
+        data: serviceData,
+        timestamp: Date.now()
+      })
+
+      return serviceData
     } catch (error) {
+      console.error('Error fetching services:', error)
       throw error
     }
   }
 
+  // Clear cache for specific key
+  const clearCache = (filterType, filterValue, filterStatus) => {
+    const cacheKey = getCacheKey(filterType, filterValue, filterStatus)
+    serviceCache.value.delete(cacheKey)
+  }
+
+  // Clear all cache
+  const clearAllCache = () => {
+    serviceCache.value.clear()
+  }
+
+  // Get cache size
+  const getCacheSize = () => {
+    return serviceCache.value.size
+  }
+
   return {
-    servicesCache: readonly(servicesCache),
     fetchServicesWithCache,
     clearCache,
-    getCacheKey
+    clearAllCache,
+    getCacheSize
   }
-}
+} 

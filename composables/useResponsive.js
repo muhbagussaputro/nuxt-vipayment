@@ -1,28 +1,29 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 export const useResponsive = () => {
-  const windowWidth = ref(0)
-  const isMobile = computed(() => windowWidth.value < 768)
-  const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1024)
-  const isDesktop = computed(() => windowWidth.value >= 1024)
-  
-  const updateWidth = () => {
-    windowWidth.value = window.innerWidth
+  const isMobile = ref(false)
+  const isTablet = ref(false)
+  const isDesktop = ref(false)
+
+  const updateResponsive = () => {
+    const width = window.innerWidth
+    isMobile.value = width < 768
+    isTablet.value = width >= 768 && width < 1024
+    isDesktop.value = width >= 1024
   }
-  
+
   onMounted(() => {
-    updateWidth()
-    window.addEventListener('resize', updateWidth)
+    updateResponsive()
+    window.addEventListener('resize', updateResponsive)
   })
-  
+
   onUnmounted(() => {
-    window.removeEventListener('resize', updateWidth)
+    window.removeEventListener('resize', updateResponsive)
   })
-  
+
   return {
-    windowWidth: readonly(windowWidth),
     isMobile,
     isTablet,
     isDesktop
   }
-}
+} 

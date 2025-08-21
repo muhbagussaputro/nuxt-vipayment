@@ -1,18 +1,18 @@
 <template>
   <div class="container">
     <h2>Prepaid Services</h2>
-    <VipPrepaidServicesForm />
-    <VipPrepaidOrderForm />
-    <VipPrepaidCheckForm />
+    <PrepaidServicesForm />
+    <PrepaidOrderForm />
+    <PrepaidCheckForm />
     <!-- Webhook endpoint biasanya untuk server, bukan frontend, jadi tidak dibuat form -->
     <NuxtLink to="/" class="btn">Kembali</NuxtLink>
   </div>
 </template>
 
 <script setup>
-import VipPrepaidServicesForm from '~/components/vipayment/VipPrepaidServicesForm.vue'
-import VipPrepaidOrderForm from '~/components/vipayment/VipPrepaidOrderForm.vue'
-import VipPrepaidCheckForm from '~/components/vipayment/VipPrepaidCheckForm.vue'
+import PrepaidServicesForm from '~/components/prepaid/PrepaidServicesForm.vue'
+import PrepaidOrderForm from '~/components/prepaid/PrepaidOrderForm.vue'
+import PrepaidCheckForm from '~/components/prepaid/PrepaidCheckForm.vue'
 </script>
 
 <style scoped>

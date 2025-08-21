@@ -68,7 +68,7 @@
                 </div>
               </div>
               
-              <VipGameBuyForm
+              <GameBuyForm
                 v-if="openedServiceCode === item.code"
                 :service="{
                   ...item,
@@ -99,7 +99,7 @@
 import { ref, watch, computed } from 'vue'
 import { useServiceCache } from '~/composables/useServiceCache'
 import { useFormatters } from '~/composables/useFormatters'
-import VipGameBuyForm from '~/components/vipayment/VipGameBuyForm.vue'
+import GameBuyForm from '~/components/game/GameBuyForm.vue'
 
 const props = defineProps({
   show: Boolean,

@@ -80,7 +80,12 @@ const fetchServices = async () => {
         filter_status: 'available'
       }
     })
-    services.value = data.value
+    // Response memiliki struktur { result: true, data: [...], message: "..." }
+    if (data.value && data.value.result && data.value.data) {
+      services.value = { data: data.value.data }
+    } else {
+      services.value = { data: [] }
+    }
   } catch (e) {
     error.value = 'Gagal mengambil layanan game.'
   } finally {

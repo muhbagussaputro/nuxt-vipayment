@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import AppHeader from '~/components/layout/AppHeader.vue'
+import AppHeader from '~/components/common/AppHeader.vue'
 import PromotionBanner from '~/components/promotion/PromotionBanner.vue'
 import PromotionCard from '~/components/promotion/PromotionCard.vue'
 

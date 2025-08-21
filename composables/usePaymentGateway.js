@@ -1,190 +1,149 @@
 import { ref } from 'vue'
 
 export const usePaymentGateway = () => {
-  const loading = ref(false)
-  const error = ref('')
-  
-  // Create payment gateway order
-  const createPaymentOrder = async (paymentMethod, orderData) => {
-    loading.value = true
-    error.value = ''
-    
+  const paymentLoading = ref(false)
+  const paymentError = ref(null)
+
+  // Payment methods configuration
+  const paymentMethods = [
+    {
+      code: 'qris',
+      name: 'QRIS',
+      icon: '📱',
+      fee: 0,
+      description: 'Scan QR dengan e-wallet favorit'
+    },
+    {
+      code: 'gopay',
+      name: 'GoPay',
+      icon: '💚',
+      fee: 0,
+      description: 'Bayar dengan GoPay'
+    },
+    {
+      code: 'ovo',
+      name: 'OVO',
+      icon: '💜',
+      fee: 0,
+      description: 'Bayar dengan OVO'
+    },
+    {
+      code: 'dana',
+      name: 'DANA',
+      icon: '💙',
+      fee: 0,
+      description: 'Bayar dengan DANA'
+    },
+    {
+      code: 'shopeepay',
+      name: 'ShopeePay',
+      icon: '🧡',
+      fee: 0,
+      description: 'Bayar dengan ShopeePay'
+    },
+    {
+      code: 'bank_transfer',
+      name: 'Transfer Bank',
+      icon: '🏦',
+      fee: 0,
+      description: 'Transfer ke rekening bank'
+    },
+    {
+      code: 'virtual_account',
+      name: 'Virtual Account',
+      icon: '🏧',
+      fee: 4000,
+      description: 'Bayar melalui VA Bank'
+    },
+    {
+      code: 'credit_card',
+      name: 'Kartu Kredit',
+      icon: '💳',
+      fee: 0,
+      description: 'Visa, Mastercard, JCB'
+    },
+    {
+      code: 'convenience_store',
+      name: 'Minimarket',
+      icon: '🏪',
+      fee: 5000,
+      description: 'Indomaret, Alfamart'
+    }
+  ]
+
+  // Create payment order
+  const createPaymentOrder = async (orderData) => {
+    paymentLoading.value = true
+    paymentError.value = null
+
     try {
-      // Prepare payment gateway request
-      const paymentRequest = {
-        gateway: paymentMethod,
-        amount: orderData.amount,
-        order_id: `VIPAY-${Date.now()}`,
-        customer_details: {
-          first_name: orderData.customer_name || 'Customer',
-          email: orderData.customer_email || 'customer@vipayment.com',
-          phone: orderData.customer_phone || '081234567890'
-        },
-        item_details: {
-          id: orderData.service_code,
-          name: orderData.service_name,
-          quantity: orderData.quantity || 1,
-          price: orderData.amount
-        },
-        callback_data: {
-          service_code: orderData.service_code,
-          target: orderData.target,
-          additional_target: orderData.additional_target,
-          quantity: orderData.quantity,
-          additional_data: orderData.additional_data
-        }
-      }
-      
-      // Call payment gateway creation API
-      const response = await $fetch('/payment/create', {
-        baseURL: useRuntimeConfig().public.apiBase,
+      // Simulate API call to create order
+      const response = await $fetch('/api/payment/create', {
         method: 'POST',
-        body: paymentRequest
+        body: orderData
       })
-      
-      if (!response || !response.payment_url) {
-        throw new Error('Gagal membuat pembayaran. Silakan coba lagi.')
-      }
-      
+
       return response
-      
-    } catch (e) {
-      console.error('Payment gateway error:', e)
-      error.value = e.message || 'Gagal membuat pembayaran'
-      throw e
+    } catch (error) {
+      paymentError.value = error.message || 'Gagal membuat order pembayaran'
+      throw error
     } finally {
-      loading.value = false
+      paymentLoading.value = false
     }
   }
-  
+
   // Redirect to payment gateway
   const redirectToPayment = (paymentUrl) => {
-    // Open payment gateway in new window or redirect current window
-    if (process.client) {
-      window.open(paymentUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')
+    if (paymentUrl) {
+      window.location.href = paymentUrl
     }
   }
-  
-  // Process payment gateway callback
-  const processCallback = async (callbackData) => {
-    loading.value = true
-    error.value = ''
-    
-    try {
-      // Verify payment status from gateway
-      const verificationResponse = await $fetch('/payment/verify', {
-        baseURL: useRuntimeConfig().public.apiBase,
-        method: 'POST',
-        body: {
-          order_id: callbackData.order_id,
-          transaction_id: callbackData.transaction_id,
-          gateway: callbackData.gateway
-        }
-      })
-      
-      if (verificationResponse.status === 'success') {
-        // Payment verified, now process the actual order
-        const orderResponse = await processVipaymentOrder(verificationResponse.callback_data)
-        return orderResponse
-      } else {
-        throw new Error('Pembayaran gagal atau belum selesai')
-      }
-      
-    } catch (e) {
-      console.error('Payment callback error:', e)
-      error.value = e.message || 'Gagal memverifikasi pembayaran'
-      throw e
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  // Process order to vipayment after payment success
-  const processVipaymentOrder = async (orderData) => {
-    try {
-      let endpoint = ''
-      let body = {}
-      
-      // Determine endpoint based on service type
-      if (orderData.service_code.includes('prepaid')) {
-        endpoint = '/vipayment/prepaid/order'
-        body = {
-          code: orderData.service_code,
-          target: orderData.target,
-          quantity: orderData.quantity || 1,
-          additional_data: orderData.additional_data || ''
-        }
-      } else {
-        endpoint = '/vipayment/game/order/topup'
-        body = {
-          service: orderData.service_code,
-          data_no: orderData.target,
-          data_zone: orderData.additional_target || ''
-        }
-        
-        if (orderData.quantity && orderData.quantity > 1) {
-          body.quantity = orderData.quantity
-        }
-        
-        if (orderData.additional_data) {
-          body.additional_data = orderData.additional_data
-        }
-      }
-      
-      // Convert to URL-encoded format for vipayment API
-      const urlEncodedBody = new URLSearchParams(body).toString()
-      
-      const response = await $fetch(endpoint, {
-        baseURL: useRuntimeConfig().public.apiBase,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: urlEncodedBody
-      })
-      
-      if (!response || response.result === false) {
-        throw new Error(response?.message || 'Gagal memproses pesanan ke vipayment')
-      }
-      
-      return response
-      
-    } catch (e) {
-      console.error('Vipayment order error:', e)
-      throw e
-    }
-  }
-  
+
   // Check payment status
   const checkPaymentStatus = async (orderId) => {
-    loading.value = true
-    error.value = ''
-    
     try {
-      const response = await $fetch('/payment/status', {
-        baseURL: useRuntimeConfig().public.apiBase,
-        method: 'POST',
-        body: { order_id: orderId }
-      })
-      
+      const response = await $fetch(`/api/payment/status/${orderId}`)
       return response
-      
-    } catch (e) {
-      console.error('Payment status check error:', e)
-      error.value = e.message || 'Gagal mengecek status pembayaran'
-      throw e
-    } finally {
-      loading.value = false
+    } catch (error) {
+      throw error
     }
   }
-  
+
+  // Handle payment callback
+  const handlePaymentCallback = async (params) => {
+    try {
+      const response = await $fetch('/api/payment/callback', {
+        method: 'POST',
+        body: params
+      })
+      return response
+    } catch (error) {
+      throw error
+    }
+  }
+
+  // Calculate total with fee
+  const calculateTotal = (amount, paymentMethod) => {
+    const method = paymentMethods.find(m => m.code === paymentMethod)
+    const fee = method?.fee || 0
+    return amount + fee
+  }
+
+  // Format payment method display
+  const getPaymentMethodDisplay = (code) => {
+    const method = paymentMethods.find(m => m.code === code)
+    return method || null
+  }
+
   return {
-    loading,
-    error,
+    paymentMethods,
+    paymentLoading,
+    paymentError,
     createPaymentOrder,
     redirectToPayment,
-    processCallback,
-    processVipaymentOrder,
-    checkPaymentStatus
+    checkPaymentStatus,
+    handlePaymentCallback,
+    calculateTotal,
+    getPaymentMethodDisplay
   }
 } 
